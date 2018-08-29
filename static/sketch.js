@@ -3,7 +3,7 @@ var metres_per_pixel = 1;
 var particle_width = 10;
 var particle_mass = 1000;
 var particles = [];
-var framerate = 60;
+var framerate = 30;
 
 var last = -1;
 
