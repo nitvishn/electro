@@ -7,7 +7,7 @@ var framerate = 60;
 
 var last = -1;
 
-var friction_proportion = 0.05;
+var friction_proportion = 0;
 var collision_proportion = 0;
 
 var seconds_per_frame = 1/framerate;
