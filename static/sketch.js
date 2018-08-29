@@ -7,7 +7,7 @@ var framerate = 60;
 
 var last = -1;
 
-var friction_proportion = 0;
+var friction_proportion = 0.05;
 var collision_proportion = 0;
 
 var seconds_per_frame = 1/framerate;
@@ -69,11 +69,6 @@ function check(arr, item){
 	return false
 }
 
-function mousePressed(){
-	particle = new Particle(mouseX, mouseY, last*-1, 0, 0)
-	particles.push(particle)
-}
-
 function combineParticles(p1, p2){
 	neutral = new Particle((p1.x+p2.x)/2, (p1.y+p2.y)/2, 0, (p1.xvelocity+p2.xvelocity)/2, (p1.yvelocity+p2.yvelocity)/2);
 	particles.push(neutral)
@@ -88,8 +83,12 @@ function neutralise(p1, p2){
 }
 
 function keyPressed(){
-	if(keyCode === 83){
-		last *= -1
+	if(keyCode === 78){
+		charge = -1;
+		particles.push(new Particle(mouseX, mouseY, charge, 0, 0))
+	}else if(keyCode === 80){
+		charge = 1
+		particles.push(new Particle(mouseX, mouseY, charge, 0, 0))
 	}
 }
 
@@ -131,7 +130,6 @@ function updateVelocities(){
 		p1.yvelocity -= friction(p1.yvelocity)
 		p2.yvelocity -= friction(p2.yvelocity)
 
-		console.log(p1.x, p1.y)
 	}
 }
 
