@@ -1,147 +1,204 @@
 var CoulombConstant = 8987551787.3681764;
-var metres_per_pixel = 1;
-var particle_width = 10;
-var particle_mass = 1000;
 var particles = [];
-var framerate = 30;
+var particle_width = 10;
 
-var last = -1;
-
+var metres_per_pixel = 1;
+var particle_mass = 1000;
 var friction_proportion = 0;
-var collision_proportion = 0;
+var time_multiplier = 1;
 
-var seconds_per_frame = 1/framerate;
+var framerate = 30;
+var seconds_per_frame = (1 / framerate) * time_multiplier;
 
 function setup() {
-	createCanvas(windowWidth, windowHeight);
-	frameRate(framerate)
+  createCanvas(windowWidth, windowHeight);
+  frameRate(framerate);
+
+  //sliders
+  metresSlider = createSlider(1, 1000, 100);
+  metresSlider.position(20, 20);
+  massSlider = createSlider(1, 10000, 1000);
+  massSlider.position(20, 50);
+  frictionSlider = createSlider(0, 100, 5);
+  frictionSlider.position(20, 80);
+
+  //title
+  title = createElement('h1', 'Charged Particle Simulator')
+	title.center()
+	title.position(title.x, 0)
 }
 
-function friction(v){
-	return v*friction_proportion;
+function friction(v) {
+  return v * friction_proportion;
 }
 
-function Particle(x, y, charge, xvelocity, yvelocity){
-	this.x = x;
-	this.y = y;
-	this.charge = charge;
-	this.xvelocity = xvelocity;
-	this.yvelocity = yvelocity;
+function Particle(x, y, charge, xvelocity, yvelocity) {
+  this.x = x;
+  this.y = y;
+  this.charge = charge;
+  this.xvelocity = xvelocity;
+  this.yvelocity = yvelocity;
 }
 
 function combinations(list) {
-  if (list.length < 2) { return []; }
+  if (list.length < 2) {
+    return [];
+  }
   var first = list[0],
-      rest  = list.slice(1),
-      pairs = rest.map(function (x) { return [first, x]; });
+    rest = list.slice(1),
+    pairs = rest.map(function(x) {
+      return [first, x];
+    });
   return pairs.concat(combinations(rest));
 }
 
-function drawParticles(){
-	background(0);
-	for(var i = 0; i<particles.length; i++){
-		P = particles[i];
-		if(P.charge < 0){
-			fill(0, 0, 255);
-		}else if(P.charge > 0){
-			fill(255, 0, 0);
-		}else{
-			fill(255);
-		}
-		ellipse(P.x, P.y, particle_width);
-	}
+function drawParticles() {
+  background(255);
+  stroke(255)
+  for (var i = 0; i < particles.length; i++) {
+    P = particles[i];
+    if (P.charge < 0) {
+      fill(0, 0, 255);
+    } else if (P.charge > 0) {
+      fill(255, 0, 0);
+    } else {
+      fill(0);
+    }
+    ellipse(P.x, P.y, particle_width);
+  }
 }
 
-function distance(P1, P2){
-	return Math.sqrt((P1.x - P2.x)**2 + (P1.y - P2.y)**2)
+function distance(P1, P2) {
+  return Math.sqrt((P1.x - P2.x) ** 2 + (P1.y - P2.y) ** 2)
 }
 
-function slope(P1, P2){
-	return (P1.y - P2.y)/(P1.x - P2.x)
+function slope(P1, P2) {
+  return (P1.y - P2.y) / (P1.x - P2.x)
 }
 
-function check(arr, item){
-	for(var i = 0; i < arr.length; i++){
-		if(arr[i]===item){
-			return true
-		}
-	}
-	return false
+function check(arr, item) {
+  for (var i = 0; i < arr.length; i++) {
+    if (arr[i] === item) {
+      return true
+    }
+  }
+  return false
 }
 
-function combineParticles(p1, p2){
-	neutral = new Particle((p1.x+p2.x)/2, (p1.y+p2.y)/2, 0, (p1.xvelocity+p2.xvelocity)/2, (p1.yvelocity+p2.yvelocity)/2);
-	particles.push(neutral)
-	particles.splice(particles.indexOf(p1), 1)
-	particles.splice(particles.indexOf(p2), 1)
-	console.log(particles)
+function combineParticles(p1, p2) {
+  neutral = new Particle((p1.x + p2.x) / 2, (p1.y + p2.y) / 2, 0, (p1.xvelocity + p2.xvelocity) / 2, (p1.yvelocity + p2.yvelocity) / 2);
+  particles.push(neutral)
+  particles.splice(particles.indexOf(p1), 1)
+  particles.splice(particles.indexOf(p2), 1)
+  console.log(particles)
 }
 
-function neutralise(p1, p2){
-	p1.charge = 0;
-	p2.charge = 0;
+function neutralise(p1, p2) {
+  p1.charge = 0;
+  p2.charge = 0;
 }
 
-function keyPressed(){
-	if(keyCode === 78){
-		charge = -1;
-		particles.push(new Particle(mouseX, mouseY, charge, 0, 0))
-	}else if(keyCode === 80){
-		charge = 1
-		particles.push(new Particle(mouseX, mouseY, charge, 0, 0))
-	}
+function keyPressed() {
+  if (keyCode === 78) {
+    charge = -1;
+    particles.push(new Particle(mouseX, mouseY, charge, 0, 0))
+  } else if (keyCode === 80) {
+    charge = 1
+    particles.push(new Particle(mouseX, mouseY, charge, 0, 0))
+  }
 }
 
-function updateVelocities(){
-	pairs = combinations(particles)
-	for(var i = 0; i < pairs.length; i++){
-		p1 = pairs[i][0]
-		p2 = pairs[i][1]
-		theta1 = Math.atan(slope(p1, p2))
-		theta2 = Math.atan(slope(p1, p2))
-		if(p1.x < p2.x){
-			theta1 += Math.PI
-		}else{
-			theta2 += Math.PI
-		}
-		force = (CoulombConstant*p1.charge*p2.charge)/((distance(p1, p2)*metres_per_pixel)**2);
-		if(distance(p1, p2)<(particle_width*1.2) && ((p1.charge>0&&p2.charge<0)||(p1.charge<0&&p2.charge>0))){
-			// p1.xvelocity = 0;
-			// p1.yvelocity = 0;
-			// p2.xvelocity = 0;
-			// p2.yvelocity = 0;
-
-			buff = [p1.xvelocity, p1.yvelocity]
-			p1.xvelocity = p2.xvelocity - collision_proportion*p2.xvelocity;
-			p1.yvelocity = p2.yvelocity - collision_proportion*p2.yvelocity;
-			p2.xvelocity = buff[0] - collision_proportion*buff[0];
-			p2.yvelocity = buff[1] - collision_proportion*buff[1];
-			neutralise(p1, p2)
-			continue;
-		}
-		p1.xvelocity += (force*Math.cos(theta1)/particle_mass)*seconds_per_frame
-		p2.xvelocity += (force*Math.cos(theta2)/particle_mass)*seconds_per_frame
-
-		p1.yvelocity += (force*Math.sin(theta1)/particle_mass)*seconds_per_frame
-		p2.yvelocity += (force*Math.sin(theta2)/particle_mass)*seconds_per_frame
-
-		p1.xvelocity -= friction(p1.xvelocity)
-		p2.xvelocity -= friction(p2.xvelocity)
-		p1.yvelocity -= friction(p1.yvelocity)
-		p2.yvelocity -= friction(p2.yvelocity)
-
-	}
+function addForce(particle, force, angle) {
+  particle.xvelocity += (force * Math.cos(angle) / particle_mass) * seconds_per_frame
+  particle.xvelocity += (force * Math.sin(angle) / particle_mass) * seconds_per_frame
 }
 
-function updatePositions(){
-	for(var i = 0; i < particles.length; i++){
-		particles[i].x += particles[i].xvelocity * seconds_per_frame
-		particles[i].y += particles[i].yvelocity * seconds_per_frame
-	}
+function updateVelocities() {
+  pairs = combinations(particles)
+  console.log(particles.length)
+  j = pairs.length
+  for (var i = 0; i < j; i++) {
+    p1 = pairs[i][0]
+    p2 = pairs[i][1]
+    if (p1.x == p2.x && p1.y == p2.y) {
+      neutralise(p1, p2)
+      continue;
+    }
+    if (p1.x > windowWidth || p1.x < 0 || p1.y > windowHeight || p1.y < 0) {
+      particles.splice(particles.indexOf(p1), 1)
+      pairs = combinations(particles)
+      j = pairs.length
+      continue;
+    }
+    if (p2.x > windowWidth || p2.x < 0 || p2.y > windowHeight || p2.y < 0) {
+      particles.splice(particles.indexOf(p2), 1)
+      pairs = combinations(particles)
+      j = pairs.length
+      continue;
+    }
+    theta1 = Math.atan(slope(p1, p2))
+    theta2 = Math.atan(slope(p1, p2))
+    if (p1.x < p2.x) {
+      theta1 += Math.PI
+    } else {
+      theta2 += Math.PI
+    }
+    force = (CoulombConstant * p1.charge * p2.charge) / ((distance(p1, p2) * metres_per_pixel) ** 2);
+    if (distance(p1, p2) < (particle_width * 2) && ((p1.charge > 0 && p2.charge < 0) || (p1.charge < 0 && p2.charge > 0))) {
+      buff = [p1.xvelocity, p1.yvelocity]
+      // p1.xvelocity = p2.xvelocity - collision_proportion*p2.xvelocity;
+      // p1.yvelocity = p2.yvelocity - collision_proportion*p2.yvelocity;
+      // p2.xvelocity = buff[0] - collision_proportion*buff[0];
+      // p2.yvelocity = buff[1] - collision_proportion*buff[1];
+
+      p1.xvelocity = (p2.xvelocity + p1.xvelocity) / 2;
+      p1.yvelocity = (p2.yvelocity + p1.yvelocity) / 2;
+      p2.xvelocity = (p2.xvelocity + buff[0]) / 2;
+      p2.yvelocity = (p2.yvelocity + buff[1]) / 2;
+      // neutralise(p1, p2)
+      continue;
+    } else if (distance(p1, p2) < (particle_width * 2) && (p1.charge === 0 || p2.charge === 0)) {
+      buff = [p1.xvelocity, p1.yvelocity]
+      p1.xvelocity = (p2.xvelocity + p1.xvelocity) / 2;
+      p1.yvelocity = (p2.yvelocity + p1.yvelocity) / 2;
+      p2.xvelocity = (p2.xvelocity + buff[0]) / 2;
+      p2.yvelocity = (p2.yvelocity + buff[1]) / 2;
+    }
+    p1.xvelocity += (force * Math.cos(theta1) / particle_mass) * seconds_per_frame
+    p2.xvelocity += (force * Math.cos(theta2) / particle_mass) * seconds_per_frame
+
+    p1.yvelocity += (force * Math.sin(theta1) / particle_mass) * seconds_per_frame
+    p2.yvelocity += (force * Math.sin(theta2) / particle_mass) * seconds_per_frame
+
+    p1.xvelocity -= friction(p1.xvelocity)
+    p2.xvelocity -= friction(p2.xvelocity)
+    p1.yvelocity -= friction(p1.yvelocity)
+    p2.yvelocity -= friction(p2.yvelocity)
+
+  }
+}
+
+function updatePositions() {
+  for (var i = 0; i < particles.length; i++) {
+    particles[i].x += particles[i].xvelocity * seconds_per_frame
+    particles[i].y += particles[i].yvelocity * seconds_per_frame
+  }
+}
+
+function sliderUpdate() {
+  metres_per_pixel = metresSlider.value() / 100
+  friction_proportion = frictionSlider.value() / 100
+  particle_mass = massSlider.value()
+
+  fill(0)
+  text("Metres Per Pixel: " + String(metres_per_pixel), metresSlider.x * 2 + metresSlider.width, 35);
+  text("Particle Mass: " + String(particle_mass), massSlider.x * 2 + massSlider.width, 65);
+  text("Friction Percentage: " + String(friction_proportion * 100) + "%", frictionSlider.x * 2 + frictionSlider.width, 95);
 }
 
 function draw() {
-	drawParticles();
-	updateVelocities();
-	updatePositions();
+  drawParticles();
+  sliderUpdate();
+  updateVelocities();
+  updatePositions();
 }
