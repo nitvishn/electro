@@ -6,6 +6,7 @@ var metres_per_pixel = 1;
 var particle_mass = 1000;
 var friction_proportion = 0;
 var time_multiplier = 1;
+var bounce = true;
 
 var framerate = 30;
 var seconds_per_frame = (1 / framerate) * time_multiplier;
@@ -21,15 +22,23 @@ function setup() {
   massSlider.position(20, 50);
   frictionSlider = createSlider(0, 1, 0.05, 0);
   frictionSlider.position(20, 80);
+	timeSlider = createSlider(0.1, 2, 1, 0);
+  timeSlider.position(20, 110);
 
 	//buttons
 	resetButton = createButton('Reset Parameters')
-	resetButton.position(20, 110)
+	resetButton.position(20, 170)
 	resetButton.mousePressed(reset)
 
 	clearButton = createButton('Clear Particles')
-	clearButton.position(20, 140)
+	clearButton.position(20, 200)
 	clearButton.mousePressed(clearParticles)
+
+	//bounce
+	bounceCheckBox = createInput(0, 1);
+	bounceCheckBox.attribute("type","checkbox");
+	bounceCheckBox.position(120, 142);
+	bounceCheckBox.attribute('checked', bounce);
 
   //title
   title = createElement('h1', 'Charged Particle Simulator')
@@ -49,6 +58,7 @@ function reset(){
 	massSlider.value(1000);
 	frictionSlider.value(0.05);
 	metresSlider.value(1);
+	timeSlider.value(1);
 }
 
 function Particle(x, y, charge, xvelocity, yvelocity) {
@@ -131,28 +141,75 @@ function addForce(particle, force, angle) {
   particle.xvelocity += (force * Math.sin(angle) / particle_mass) * seconds_per_frame
 }
 
+function outOfBounds(particle){
+	return (particle.x > windowWidth || particle.x < 0 || particle.y > windowHeight || particle.y < 0);
+}
+
+function addVelocity(particle, velocity, theta){
+	particle.xvelocity += Math.cos(theta)*velocity
+	particle.yvelocity += Math.sin(theta)*velocity
+}
+
+function touchingVerticalWalls(particle){
+	return (particle.y + particle_width > windowHeight || particle.y - particle_width < 0)
+}
+
+function touchingHorizontalWalls(particle){
+	return (particle.x + particle_width > windowWidth || particle.x - particle_width < 0)
+}
+
 function updateVelocities() {
   pairs = combinations(particles)
   j = pairs.length
+
   for (var i = 0; i < j; i++) {
     p1 = pairs[i][0]
     p2 = pairs[i][1]
+
+		bounced = false;
+
     if (p1.x == p2.x && p1.y == p2.y) {
       neutralise(p1, p2)
       continue;
     }
-    if (p1.x > windowWidth || p1.x < 0 || p1.y > windowHeight || p1.y < 0) {
-      particles.splice(particles.indexOf(p1), 1)
-      pairs = combinations(particles)
-      j = pairs.length
-      continue;
-    }
-    if (p2.x > windowWidth || p2.x < 0 || p2.y > windowHeight || p2.y < 0) {
-      particles.splice(particles.indexOf(p2), 1)
-      pairs = combinations(particles)
-      j = pairs.length
-      continue;
-    }
+
+		if(bounce){
+			if (touchingVerticalWalls(p1)){
+				p1.y -= p1.yvelocity*seconds_per_frame
+				p1.yvelocity = -p1.yvelocity;
+				bounced = true;
+			}else if(touchingHorizontalWalls(p1)){
+				p1.x -= p1.xvelocity*seconds_per_frame
+				p1.xvelocity = -p1.xvelocity;
+				bounced = true;
+			}
+			if (touchingVerticalWalls(p2)){
+				p2.y -= p2.yvelocity*seconds_per_frame
+				p2.yvelocity = -p2.yvelocity;
+				bounced = true;
+			}else if(touchingHorizontalWalls(p2)){
+				p2.x -= p2.xvelocity*seconds_per_frame
+				p2.xvelocity = -p2.xvelocity;
+				bounced = true;
+			}
+			if(bounced){
+				continue;
+			}
+		}else{
+			if (outOfBounds(p1)) {
+				particles.splice(particles.indexOf(p1), 1)
+				pairs = combinations(particles)
+				j = pairs.length
+				continue;
+			}
+			if (outOfBounds(p2)) {
+				particles.splice(particles.indexOf(p2), 1)
+				pairs = combinations(particles)
+				j = pairs.length
+				continue;
+			}
+		}
+
     theta1 = Math.atan(slope(p1, p2))
     theta2 = Math.atan(slope(p1, p2))
     if (p1.x < p2.x) {
@@ -161,20 +218,17 @@ function updateVelocities() {
       theta2 += Math.PI
     }
     force = (CoulombConstant * p1.charge * p2.charge) / ((distance(p1, p2) * metres_per_pixel) ** 2);
-    if (distance(p1, p2) < (particle_width * 2) && ((p1.charge > 0 && p2.charge < 0) || (p1.charge < 0 && p2.charge > 0))) {
+    if (distance(p1, p2) < (particle_width*2) && ((p1.charge > 0 && p2.charge < 0) || (p1.charge < 0 && p2.charge > 0))) {
       buff = [p1.xvelocity, p1.yvelocity]
-      // p1.xvelocity = p2.xvelocity - collision_proportion*p2.xvelocity;
-      // p1.yvelocity = p2.yvelocity - collision_proportion*p2.yvelocity;
-      // p2.xvelocity = buff[0] - collision_proportion*buff[0];
-      // p2.yvelocity = buff[1] - collision_proportion*buff[1];
 
       p1.xvelocity = (p2.xvelocity + p1.xvelocity) / 2;
       p1.yvelocity = (p2.yvelocity + p1.yvelocity) / 2;
       p2.xvelocity = (p2.xvelocity + buff[0]) / 2;
       p2.yvelocity = (p2.yvelocity + buff[1]) / 2;
-      // neutralise(p1, p2)
-      continue;
-    } else if (distance(p1, p2) < (particle_width * 2) && (p1.charge === 0 || p2.charge === 0)) {
+
+			// continue;
+
+    } else if (distance(p1, p2) < (particle_width*2) && (p1.charge === 0 || p2.charge === 0)) {
       buff = [p1.xvelocity, p1.yvelocity]
       p1.xvelocity = (p2.xvelocity + p1.xvelocity) / 2;
       p1.yvelocity = (p2.yvelocity + p1.yvelocity) / 2;
@@ -206,14 +260,20 @@ function sliderUpdate() {
   metres_per_pixel = metresSlider.value()
   friction_proportion = frictionSlider.value()
   particle_mass = massSlider.value()
+	time_multiplier = timeSlider.value()
+
+	bounce = bounceCheckBox.elt.checked;
 
   fill(0)
   text("Metres Per Pixel: " + String(metres_per_pixel), metresSlider.x * 2 + metresSlider.width, 35);
   text("Particle Mass: " + String(particle_mass), massSlider.x * 2 + massSlider.width, 65);
   text("Friction Percentage: " + String(friction_proportion * 100) + "%", frictionSlider.x * 2 + frictionSlider.width, 95);
+	text("Time Multiplier: " + String(time_multiplier), timeSlider.x * 2 + timeSlider.width, 125);
+	text("Bounce off edges: ", 20, 155)
 }
 
 function draw() {
+	seconds_per_frame = (1 / framerate) * time_multiplier;
   drawParticles();
   sliderUpdate();
   updateVelocities();
