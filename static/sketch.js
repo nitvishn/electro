@@ -15,12 +15,21 @@ function setup() {
   frameRate(framerate);
 
   //sliders
-  metresSlider = createSlider(1, 1000, 100);
+  metresSlider = createSlider(0.01, 2, 1, 0);
   metresSlider.position(20, 20);
-  massSlider = createSlider(1, 10000, 1000);
+  massSlider = createSlider(1, 2000, 1000, 1);
   massSlider.position(20, 50);
-  frictionSlider = createSlider(0, 100, 5);
+  frictionSlider = createSlider(0, 1, 0.05, 0);
   frictionSlider.position(20, 80);
+
+	//buttons
+	resetButton = createButton('Reset Parameters')
+	resetButton.position(20, 110)
+	resetButton.mousePressed(reset)
+
+	clearButton = createButton('Clear Particles')
+	clearButton.position(20, 140)
+	clearButton.mousePressed(clearParticles)
 
   //title
   title = createElement('h1', 'Charged Particle Simulator')
@@ -28,8 +37,18 @@ function setup() {
 	title.position(title.x, 0)
 }
 
+function clearParticles(){
+	particles = []
+}
+
 function friction(v) {
   return v * friction_proportion;
+}
+
+function reset(){
+	massSlider.value(1000);
+	frictionSlider.value(0.05);
+	metresSlider.value(1);
 }
 
 function Particle(x, y, charge, xvelocity, yvelocity) {
@@ -90,7 +109,6 @@ function combineParticles(p1, p2) {
   particles.push(neutral)
   particles.splice(particles.indexOf(p1), 1)
   particles.splice(particles.indexOf(p2), 1)
-  console.log(particles)
 }
 
 function neutralise(p1, p2) {
@@ -115,7 +133,6 @@ function addForce(particle, force, angle) {
 
 function updateVelocities() {
   pairs = combinations(particles)
-  console.log(particles.length)
   j = pairs.length
   for (var i = 0; i < j; i++) {
     p1 = pairs[i][0]
@@ -186,8 +203,8 @@ function updatePositions() {
 }
 
 function sliderUpdate() {
-  metres_per_pixel = metresSlider.value() / 100
-  friction_proportion = frictionSlider.value() / 100
+  metres_per_pixel = metresSlider.value()
+  friction_proportion = frictionSlider.value()
   particle_mass = massSlider.value()
 
   fill(0)
