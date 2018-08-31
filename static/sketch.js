@@ -95,6 +95,13 @@ function drawParticles() {
     }
     ellipse(P.x, P.y, particle_width);
   }
+
+  fill(0)
+  text("Metres Per Pixel: " + String(metres_per_pixel), metresSlider.x * 2 + metresSlider.width, 35);
+  text("Particle Mass: " + String(particle_mass), massSlider.x * 2 + massSlider.width, 65);
+  text("Friction Percentage: " + String(friction_proportion * 100) + "%", frictionSlider.x * 2 + frictionSlider.width, 95);
+	text("Time Multiplier: " + String(time_multiplier), timeSlider.x * 2 + timeSlider.width, 125);
+	text("Bounce off edges: ", 20, 155)
 }
 
 function distance(P1, P2) {
@@ -173,23 +180,48 @@ function updateVelocities() {
       continue;
     }
 
+    if (distance(p1, p2) <= (particle_width*1.5) && !(p1.charge < 0 && p2.charge < 0)) {
+
+      buff = [p1.xvelocity, p1.yvelocity]
+
+      p1.xvelocity = (p2.xvelocity + p1.xvelocity) / 2;
+      p1.yvelocity = (p2.yvelocity + p1.yvelocity) / 2;
+      p2.xvelocity = (p2.xvelocity + buff[0]) / 2;
+      p2.yvelocity = (p2.yvelocity + buff[1]) / 2;
+
+      continue;
+
+    }
+
 		if(bounce){
 			if (touchingVerticalWalls(p1)){
 				p1.y -= p1.yvelocity*seconds_per_frame
+        p1.x -= p1.xvelocity*seconds_per_frame
 				p1.yvelocity = -p1.yvelocity;
+        p1.y += p1.yvelocity*seconds_per_frame
+        p1.x += p1.xvelocity*seconds_per_frame
 				bounced = true;
 			}else if(touchingHorizontalWalls(p1)){
-				p1.x -= p1.xvelocity*seconds_per_frame
+        p1.y -= p1.yvelocity*seconds_per_frame
+        p1.x -= p1.xvelocity*seconds_per_frame
 				p1.xvelocity = -p1.xvelocity;
+        p1.y += p1.yvelocity*seconds_per_frame
+        p1.x += p1.xvelocity*seconds_per_frame
 				bounced = true;
 			}
 			if (touchingVerticalWalls(p2)){
-				p2.y -= p2.yvelocity*seconds_per_frame
+        p2.y -= p2.yvelocity*seconds_per_frame
+        p2.x -= p2.xvelocity*seconds_per_frame
 				p2.yvelocity = -p2.yvelocity;
+        p2.y += p2.yvelocity*seconds_per_frame
+        p2.x += p2.xvelocity*seconds_per_frame
 				bounced = true;
 			}else if(touchingHorizontalWalls(p2)){
-				p2.x -= p2.xvelocity*seconds_per_frame
+        p2.y -= p2.yvelocity*seconds_per_frame
+        p2.x -= p2.xvelocity*seconds_per_frame
 				p2.xvelocity = -p2.xvelocity;
+        p2.y += p2.yvelocity*seconds_per_frame
+        p2.x += p2.xvelocity*seconds_per_frame
 				bounced = true;
 			}
 			if(bounced){
@@ -218,23 +250,7 @@ function updateVelocities() {
       theta2 += Math.PI
     }
     force = (CoulombConstant * p1.charge * p2.charge) / ((distance(p1, p2) * metres_per_pixel) ** 2);
-    if (distance(p1, p2) < (particle_width*2) && ((p1.charge > 0 && p2.charge < 0) || (p1.charge < 0 && p2.charge > 0))) {
-      buff = [p1.xvelocity, p1.yvelocity]
 
-      p1.xvelocity = (p2.xvelocity + p1.xvelocity) / 2;
-      p1.yvelocity = (p2.yvelocity + p1.yvelocity) / 2;
-      p2.xvelocity = (p2.xvelocity + buff[0]) / 2;
-      p2.yvelocity = (p2.yvelocity + buff[1]) / 2;
-
-			// continue;
-
-    } else if (distance(p1, p2) < (particle_width*2) && (p1.charge === 0 || p2.charge === 0)) {
-      buff = [p1.xvelocity, p1.yvelocity]
-      p1.xvelocity = (p2.xvelocity + p1.xvelocity) / 2;
-      p1.yvelocity = (p2.yvelocity + p1.yvelocity) / 2;
-      p2.xvelocity = (p2.xvelocity + buff[0]) / 2;
-      p2.yvelocity = (p2.yvelocity + buff[1]) / 2;
-    }
     p1.xvelocity += (force * Math.cos(theta1) / particle_mass) * seconds_per_frame
     p2.xvelocity += (force * Math.cos(theta2) / particle_mass) * seconds_per_frame
 
@@ -261,15 +277,8 @@ function sliderUpdate() {
   friction_proportion = frictionSlider.value()
   particle_mass = massSlider.value()
 	time_multiplier = timeSlider.value()
-
 	bounce = bounceCheckBox.elt.checked;
 
-  fill(0)
-  text("Metres Per Pixel: " + String(metres_per_pixel), metresSlider.x * 2 + metresSlider.width, 35);
-  text("Particle Mass: " + String(particle_mass), massSlider.x * 2 + massSlider.width, 65);
-  text("Friction Percentage: " + String(friction_proportion * 100) + "%", frictionSlider.x * 2 + frictionSlider.width, 95);
-	text("Time Multiplier: " + String(time_multiplier), timeSlider.x * 2 + timeSlider.width, 125);
-	text("Bounce off edges: ", 20, 155)
 }
 
 function draw() {
